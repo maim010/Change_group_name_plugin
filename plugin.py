@@ -15,14 +15,13 @@
 - 修改群名命令Command - 手动执行修改群名操作（支持用户权限控制）
 """
 
-from typing import List, Tuple, Type, Optional
+from typing import List, Tuple, Type, Optional, Union
 import random
 
-from src.plugin_system.base.base_plugin import BasePlugin
-from src.plugin_system.base.base_plugin import register_plugin
+from src.plugin_system import BasePlugin, register_plugin
 from src.plugin_system.base.base_action import BaseAction
 from src.plugin_system.base.base_command import BaseCommand
-from src.plugin_system.base.component_types import ComponentInfo, ActionActivationType, ChatMode
+from src.plugin_system.base.component_types import ComponentInfo, ActionActivationType, ChatMode, CommandInfo
 from src.plugin_system.base.config_types import ConfigField
 from src.common.logger import get_logger
 from src.plugin_system.apis import generator_api
@@ -46,8 +45,6 @@ class ChangeGroupNameAction(BaseAction):
     keyword_case_sensitive = False
 
     llm_judge_prompt = """
-你是有温度的赛博群友，而非机械执行程序。修改群名决策需综合聊天语境和群组氛围判断
-判定是否需要使用修改群名动作
 修改群名动作的严格条件：
 
 使用修改群名的情况：
@@ -58,13 +55,11 @@ class ChangeGroupNameAction(BaseAction):
 
 绝对不要使用的情况：
 1. 没有明确授权的情况下擅自修改群名
-2. 仅仅因为个人喜好而修改群名
-3. 在没有讨论的情况下突然改变群名
+2. 在没有讨论的情况下突然改变群名
 """
 
     action_parameters = {
         "new_name": "新的群名称，必填，请仔细确认新群名符合群组主题且不包含违规内容",
-        "reason": "修改群名理由，可选",
     }
 
     action_require = [
@@ -303,6 +298,8 @@ class ChangeGroupNamePlugin(BasePlugin):
     """
     plugin_name = "change_group_name_plugin"
     enable_plugin = True
+    dependencies: List[str] = []
+    python_dependencies: List[str] = []
     config_file_name = "config.toml"
     config_section_descriptions = {
         "plugin": "插件基本信息配置",
@@ -382,7 +379,14 @@ class ChangeGroupNamePlugin(BasePlugin):
             "include_action_info": ConfigField(type=bool, default=True, description="日志中是否包含操作信息"),
         },
     }
-    def get_plugin_components(self) -> List[Tuple[ComponentInfo, Type]]:
+    def get_plugin_components(
+        self,
+    ) -> List[
+        Union[
+            Tuple[ComponentInfo, Type[BaseAction]],
+            Tuple[CommandInfo, Type[BaseCommand]],
+        ]
+    ]:
         enable_smart_change_name = self.get_config("components.enable_smart_change_name", True)
         enable_change_name_command = self.get_config("components.enable_change_name_command", True)
         components = []
